@@ -56,7 +56,7 @@ jobs:
           mkdir Payload
           cp -r LUIS.app Payload/
           zip -r LUIS.ipa Payload
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: LUIS-IPA
           path: LUIS.ipa
