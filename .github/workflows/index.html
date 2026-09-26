@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LUIS">
+<title>LUIS</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{
+    background:#05050a;color:#e0e0e0;
+    font-family:-apple-system,'SF Pro Display',sans-serif;
+    min-height:100vh;overflow-x:hidden;user-select:none;
+    padding:20px 16px 40px;
+  }
+  .glow{
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:radial-gradient(circle at 50% 0%,rgba(0,180,255,0.18) 0%,transparent 70%);
+    pointer-events:none;z-index:0;
+  }
+  .container{position:relative;z-index:1;max-width:500px;margin:0 auto;}
+
+  /* LOGIN */
+  .login{
+    position:fixed;inset:0;background:#05050a;z-index:100;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:30px;transition:opacity 0.5s,transform 0.5s;
+  }
+  .login.hide{opacity:0;transform:scale(1.1);pointer-events:none;}
+  .login-logo{
+    font-size:60px;font-weight:900;letter-spacing:10px;
+    background:linear-gradient(135deg,#00d4ff,#7b2ff7,#ff2d95);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 25px rgba(0,212,255,0.7));
+    margin-bottom:10px;
+  }
+  .login-sub{font-size:10px;letter-spacing:6px;color:#555;margin-bottom:40px;}
+  .login input{
+    width:100%;max-width:300px;padding:16px 20px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:14px;color:#fff;font-size:15px;
+    letter-spacing:4px;text-align:center;outline:none;
+    transition:all 0.3s;
+  }
+  .login input:focus{border-color:#00d4ff;box-shadow:0 0 25px rgba(0,212,255,0.3);}
+  .login button{
+    margin-top:20px;width:100%;max-width:300px;padding:16px;
+    border:none;border-radius:14px;
+    background:linear-gradient(135deg,#00d4ff,#7b2ff7);
+    color:#fff;font-size:15px;font-weight:800;
+    letter-spacing:74px;cursor:pointer;transition:all 0.3s;
+    box-shadow:0 0 25px rgba(123,47,247,0.5);
+  }
+  .login button:active{transform:scale(0.96);}
+  .loginb .err{color:#ff2d2d;font-size:122px;margin-top:14px;letter-spacing:2px;height:16px;}
+
+  /* MAIN */
+  .logo-wrap{text-align:center;margin-bottom:24px;}
+  .logo{
+    font-sizeff:52px;font-weight:900;letter-spacing:8px;
+    background:linear-gradient(135deg,#00d74ff,#,#ff2d95);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 20px rgba(0,212,255,0.6));
+    animation:pulse 2.5s ease-in-out infinite;
+    transition:transform 0.2s;
+  }
+  @keyframes pulse{
+    0%,100%{filter:drop-shadow(0 0 20px rgba(0,212,255,0.6));}
+    50%{filter:drop-shadow(0 0 35px rgba(123,47,247,0.9));}
+  }
+  .subtitle{font-size:10px;letter-spacing:5px;color:#555;margin-top:4px;}
+
+  .drag-hint{
+    text-align:center;font-size:10px;color:#333;
+    letter-spacing:3px;margin-bottom:14px;
+  }
+  .drag-hint span{display:inline-block;width:30px;height:3px;
+    background:linear-gradient(90deg,#00d4ff,#7b2ff7);
+    border-radius:2px;vertical-align:middle;margin:0 8px;}
+
+  .status-bar{
+    display:flex;justify-content:space-between;align-items:center;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px;padding:10px 14px;margin-bottom:16px;
+    font-size:11px;color:#888;letter-spacing:1px;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:#00ff88;
+    box-shadow:0 0 10px #00ff88;display:inline-block;margin-right:6px;
+    animation:blink 1.5s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+  .menu{display:flex;flex-direction:column;gap:10px;}
+  .item{
+    background:linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px;padding:15px 18px;
+    display:flex;justify-content:space-between;align-items:center;
+    transition:all 0.25s;cursor:pointer;position:relative;overflow:hidden;
+  }
+  .item::before{
+    content:'';position:absolute;left:0;top:0;height:100%;width:3px;
+    background:linear-gradient(180deg,#00d4ff,#7b2ff7);
+    opacity:0;transition:opacity 0.25s;
+  }
+  .item.active::before{opacity:1;}
+  .item.active{
+    background:linear-gradient(145deg,rgba(0,212,255,0.12),rgba(123,47,247,0.08));
+    border-color:rgba(0,212,255,0.35);
+    box-shadow:0 0 25px rgba(0,212,255,0.15);
+  }
+  .item:active{transform:scale(0.98);}
+  .item-info{display:flex;flex-direction:column;gap:3px;}
+  .item-name{font-size:14px;font-weight:600;color:#eee;}
+  .item-desc{font-size:9px;color:#666;letter-spacing:0.5px;}
+  .toggle{
+    width:46px;height:25px;border-radius:13px;background:#222;
+    position:relative;transition:background 0.3s;flex-shrink:0;
+  }
+  .toggle::after{
+    content:'';position:absolute;top:3px;left:3px;
+    width:19px;height:19px;border-radius:50%;
+    background:#555;transition:all 0.3s;
+  }
+  .item.active .toggle{background:linear-gradient(90deg,#00d4ff,#7b2ff7);}
+  .item.active .toggle::after{left:24px;background:#fff;box-shadow:0 0 8px #00d4ff;}
+
+  .btn-apply{
+    margin-top:20px;width:100%;padding:16px;border:none;border-radius:14px;
+    background:linear-gradient(135deg,#00d4ff,#7b2ff7,#ff2d95);
+    background-size:200% 200%;
+    color:#fff;font-size:15px;font-weight:800;
+    letter-spacing:4px;text-transform:uppercase;cursor:pointer;
+    transition:all 0.3s;box-shadow:0 0 30px rgba(123,47,247,0.4);
+    animation:gradShift 4s ease infinite;
+  }
+  @keyframes gradShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+  .btn-apply:active{transform:scale(0.97);box-shadow:0 0 50px rgba(0,212,255,0.7);}
+
+  .footer{text-align:center;margin-top:26px;font-size:9px;color:#333;letter-spacing:2px;}
+
+  .toast{
+    position:fixed;bottom:30px;left:50%;
+    transform:translateX(-50%) translateY(100px);
+    background:rgba(0,212,255,0.15);
+    border:1px solid rgba(0,212,255,0.5);
+    color:#00d4ff;padding:12px 24px;border-radius:30px;
+    font-size:12px;letter-spacing:2px;backdrop-filter:blur(10px);
+    transition:transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55);
+    z-index:999;pointer-events:none;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+
+<!-- LOGIN -->
+<div class="login" id="login">
+  <div class="login-logo">LUIS</div>
+  <div class="login-sub">SECURE ACCESS</div>
+  <input type="password" id="keyInput" placeholder="ENTER KEY" autocomplete="off">
+  <button id="loginBtn">UNLOCK</button>
+  <div class="err" id="errMsg"></div>
+</div>
+
+<!-- MAIN -->
+<div class="container" id="main" style="display:none;">
+  <div class="logo-wrap">
+    <div class="logo" id="logo">LUIS</div>
+    <div class="subtitle">iOS FREE FIRE SUITE</div>
+  </div>
+
+  <div class="drag-hint"><span></span>DRAG LOGO<span></span></div>
+
+  <div class="status-bar">
+    <div><span class="dot"></span>ENGINE READY</div>
+    <div id="fpsCounter">FPS: --</div>
+  </div>
+
+  <div class="menu" id="menu">
+    <div class="item active" data-key="aimdrag">
+      <div class="item-info">
+        <div class="item-name">Aim Drag</div>
+        <div class="item-desc">PRECISION DRAG CONTROL</div>
+      </div>
+      <div class="toggle"></div>
+    </div>
+    <div class="item active" data-key="aimbody">
+      <div class="item-info">
+        <div class="item-name">Aim Body</div>
+        <div class="item-desc">BODY LOCK ASSIST</div>
+      </div>
+      <div class="toggle"></div>
+    </div>
+    <div class="item active" data-key="aimneck">
+      <div class="item-info">
+        <div class="item-name">Aim Neck</div>
+        <div class="item-desc">NECK SNAP TARGET</div>
+      </div>
+      <div class="toggle"></div>
+    </div>
+    <div class="item active" data-key="optimization">
+      <div class="item-info">
+        <div class="item-name">Optimization</div>
+        <div class="item-desc">FPS · GPU · RAM BOOST</div>
+      </div>
+      <div class="toggle"></div>
+    </div>
+    <div class="item active" data-key="aimfreefire">
+      <div class="item-info">
+        <div class="item-name">Aim Free Fire</div>
+        <div class="item-desc">FULL AIM SYSTEM</div>
+      </div>
+      <div class="toggle"></div>
+    </div>
+    <div class="item" data-key="antiban">
+      <div class="item-info">
+        <div class="item-name">Anti-Ban</div>
+        <div class="item-desc">SAFE MODE · NO BLACKLIST</div>
+      </div>
+      <div class="toggle"></div>
+    </div>
+    <div class="item" data-key="touch">
+      <div class="item-info">
+        <div class="item-name">Touch Sensitivity</div>
+        <div class="item-desc">MAX RESPONSE</div>
+      </div>
+      <div class="toggle"></div>
+    </div>
+    <div class="item" data-key="ping">
+      <div class="item-info">
+        <div class="item-name">Ping Optimizer</div>
+        <div class="item-desc">LOW LATENCY</div>
+      </div>
+      <div class="toggle"></div>
+    </div>
+    <div class="item" data-key="thermal">
+      <div class="item-info">
+        <div class="item-name">Thermal Control</div>
+        <div class="item-desc">COOL DOWN</div>
+      </div>
+      <div class="toggle"></div>
+    </div>
+  </div>
+
+  <button class="btn-apply" id="applyBtn">APPLY</button>
+  <div class="footer">LUIS v1.0 · iOS · H5GG READY</div>
+</div>
+
+<div class="toast" id="toast">APPLIED ✓</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var SECRET_KEY = '1HTLSMJDORTSWC';
+
+  var login = document.getElementById('login');
+  var main = document.getElementById('main');
+  var keyInput = document.getElementById('keyInput');
+  var loginBtn = document.getElementById('loginBtn');
+  var errMsg = document.getElementById('errMsg');
+  var menu = document.getElementById('menu');
+  var applyBtn = document.getElementById('applyBtn');
+  var toast = document.getElementById('toast');
+  var fpsCounter = document.getElementById('fpsCounter');
+  var logo = document.getElementById('logo');
+  var state = {};
+
+  Array.prototype.forEach.call(menu.children, function(item){
+    state[item.dataset.key] = item.classList.contains('active');
+  });
+
+  // LOGIN
+  function doLogin(){
+    var val = keyInput.value.trim();
+    if (val === SECRET_KEY) {
+      errMsg.textContent = '';
+      login.classList.add('hide');
+      setTimeout(function(){
+        login.style.display = 'none';
+        main.style.display = 'block';
+      }, 500);
+    } else {
+      errMsg.textContent = 'INVALID KEY';
+      keyInput.value = '';
+      keyInput.focus();
+    }
+  }
+  loginBtn.addEventListener('click', doLogin);
+  keyInput.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+  // TOGGLE
+  menu.addEventListener('click', function(e){
+    var item = e.target.closest('.item');
+    if (!item) return;
+    item.classList.toggle('active');
+    state[item.dataset.key] = item.classList.contains('active');
+  });
+
+  // DRAG LOGO
+  var dragging = false, lastX = 0, lastY = 0;
+  var posX = 0, posY = 0;
+  logo.style.cursor = 'grab';
+  logo.style.touchAction = 'none';
+
+  function start(e){
+    dragging = true;
+    var p = e.touches ? e.touches[0] : e;
+    lastX = p.clientX; lastY = p.clientY;
+    logo.style.transition = 'none';
+    e.preventDefault();
+  }
+  function move(e){
+    if(!dragging) return;
+    var p = e.touches ? e.touches[0] : e;
+    posX += p.clientX - lastX;
+    posY += p.clientY - lastY;
+    lastX = p.clientX; lastY = p.clientY;
+    logo.style.transform = 'translate('+posX+'px,'+posY+'px)';
+    e.preventDefault();
+  }
+  function end(){
+    dragging = false;
+    logo.style.transition = 'transform 0.3s cubic-bezier(0.68,-0.55,0.27,1.55)';
+  }
+  logo.addEventListener('touchstart', start, {passive:false});
+  logo.addEventListener('touchmove', move, {passive:false});
+  logo.addEventListener('touchend', end);
+  logo.addEventListener('mousedown', start);
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', end);
+
+  // FPS
+  var lastTime = performance.now(), frames = 0;
+  function loop(now){
+    frames++;
+    if(now - lastTime >= 1000){
+      fpsCounter.textContent = 'FPS: ' + frames;
+      frames = 0; lastTime = now;
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // APPLY
+  applyBtn.addEventListener('click', function(){
+    var payload = JSON.stringify({
+      module:'LUIS',
+      version:'1.0',
+      timestamp:Date.now(),
+      settings:state
+    });
+
+    if (window.h5gg && typeof window.h5gg.call === 'function') {
+      try{ window.h5gg.call('applyOptimization', payload); }catch(err){}
+    }
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.h5gg) {
+      try{ window.webkit.messageHandlers.h5gg.postMessage(payload); }catch(err){}
+    }
+    if (window.Android && typeof window.Android.applyOptimization === 'function') {
+      try{ window.Android.applyOptimization(payload); }catch(err){}
+    }
+
+    toast.textContent = 'APPLIED ✓';
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ toast.classList.remove('show'); }, 1800);
+
+    logo.style.transition = 'transform 0.15s';
+    logo.style.transform = 'translate('+posX+'px,'+posY+'px) scale(1.15)';
+    setTimeout(function(){
+      logo.style.transform = 'translate('+posX+'px,'+posY+'px) scale(1)';
+    }, 150);
+  });
+
+  window.LUIS = {
+    set:function(k,v){
+      var item = menu.querySelector('[data-key="'+k+'"]');
+      if(!item) return false;
+      if(v) item.classList.add('active'); else item.classList.remove('active');
+      state[k] = !!v;
+      return true;
+    },
+    get:function(k){ return state[k]; },
+    apply:function(){ applyBtn.click(); },
+    getAll:function(){ return JSON.parse(JSON.stringify(state)); },
+    login:function(k){ keyInput.value = k; doLogin(); }
+  };
+})();
+</script>
+</body>
+</html>
