@@ -1,62 +1,81 @@
-name: Build IPA from URL
-on: [workflow_dispatch]
+name: Build IPA
+
+on:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Create App Structure
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build WebView App
         run: |
           mkdir -p LUIS.app
+          cp index.html LUIS.app/index.html
+
           cat > LUIS.app/Info.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-          <key>CFBundleDisplayName</key><string>LUIS X</string>
-          <key>CFBundleExecutable</key><string>LUIS</string>
-          <key>CFBundleIdentifier</key><string>com.luis.suite</string>
-          <key>CFBundleName</key><string>LUIS</string>
-          <key>CFBundlePackageType</key><string>APPL</string>
-          <key>CFBundleShortVersionString</key><string>1.0</string>
-          <key>CFBundleVersion</key><string>1</string>
-          <key>MinimumOSVersion</key><string>14.0</string>
-          <key>UIDeviceFamily</key><array><integer>1</integer></array>
-          <key>UISupportedInterfaceOrientations</key>
-          <array><string>UIInterfaceOrientationPortrait</string></array>
-          </dict></plist>
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleDisplayName</key><string>LUIS X</string>
+              <key>CFBundleExecutable</key><string>LUIS</string>
+              <key>CFBundleIdentifier</key><string>com.luis.suite</string>
+              <key>CFBundleName</key><string>LUIS</string>
+              <key>CFBundlePackageType</key><string>APPL</string>
+              <key>CFBundleShortVersionString</key><string>1.0</string>
+              <key>CFBundleVersion</key><string>1</string>
+              <key>MinimumOSVersion</key><string>14.0</string>
+              <key>UIDeviceFamily</key><array><integer>1</integer></array>
+              <key>UISupportedInterfaceOrientations</key>
+              <array><string>UIInterfaceOrientationPortrait</string></array>
+          </dict>
+          </plist>
           EOF
+
           cat > main.swift << 'EOF'
           import UIKit
           import WebKit
-          @main class AppDelegate: UIResponder, UIApplicationDelegate {
-            var window: UIWindow?
-            func application(_ app: UIApplication, didFinishLaunchingWithOptions opt: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-              window = UIWindow(frame: UIScreen.main.bounds)
-              window?.rootViewController = ViewController()
-              window?.makeKeyAndVisible()
-              return true
-            }
+
+          @main
+          class AppDelegate: UIResponder, UIApplicationDelegate {
+              var window: UIWindow?
+              func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+                  window = UIWindow(frame: UIScreen.main.bounds)
+                  window?.rootViewController = ViewController()
+                  window?.makeKeyAndVisible()
+                  return true
+              }
           }
+
           class ViewController: UIViewController {
-            var webView: WKWebView!
-            override func loadView() {
-              webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
-              view = webView
-            }
-            override func viewDidLoad() {
-              super.viewDidLoad()
-              let url = URL(string: "https://zesty-maamoul-5317b0.netlify.app")!
-              webView.load(URLRequest(url: url))
-            }
+              var webView: WKWebView!
+              override func loadView() {
+                  let config = WKWebViewConfiguration()
+                  webView = WKWebView(frame: .zero, configuration: config)
+                  view = webView
+              }
+              override func viewDidLoad() {
+                  super.viewDidLoad()
+                  if let url = Bundle.main.url(forResource: "index", withExtension: "html") {
+                      webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+                  }
+              }
           }
           EOF
+
           xcrun -sdk iphoneos swiftc -target arm64-apple-ios14.0 main.swift -o LUIS.app/LUIS -framework UIKit -framework WebKit
+
       - name: Package IPA
         run: |
           mkdir Payload
           cp -r LUIS.app Payload/
           zip -r LUIS.ipa Payload
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
         with:
           name: LUIS-IPA
           path: LUIS.ipa
